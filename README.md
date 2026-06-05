@@ -123,11 +123,16 @@ build, point it at a local `dist-embed`:
 live(fig; bundle_dir="/path/to/veusz/veusz-tauri/dist-embed")
 ```
 
+The editor is embedded as an `<iframe>` pointing at the relay, so it works in
+**JupyterLab, classic Notebook, and VS Code** (which strip inline `<script>`
+from cell output — the iframe loads a full document and runs its own scripts).
+
 Notes: the relay listens on `127.0.0.1`, so this targets a **locally-run**
-Jupyter (the browser must reach the kernel host); a comm-based transport for
-remote hubs is future work. Without `HTTP` loaded, `display(fig)` still shows a
-static SVG preview, and `export_html` always gives a fully interactive
-standalone artifact.
+Jupyter over `http://localhost` (the browser must reach the kernel host, and an
+`http` page can iframe an `http://localhost` relay without mixed-content
+issues); a comm-based transport for remote hubs is future work. Without `HTTP`
+loaded, `display(fig)` still shows a static SVG preview, and `export_html`
+always gives a fully interactive standalone artifact.
 
 ## Roadmap
 

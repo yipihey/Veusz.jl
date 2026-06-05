@@ -174,8 +174,17 @@ function Veusz.close!(session::LiveSession)
     return nothing
 end
 
-# IJulia (and any notebook) renders this as the live editor.
-Base.show(io::IO, ::MIME"text/html", session::LiveSession) = write(io, _mount_html(session))
+# IJulia (and any notebook) renders the live editor. We embed it as an *iframe*
+# pointing at the relay server rather than inlining the mount script: notebook
+# frontends (JupyterLab, VS Code) strip <script> from cell output, but an iframe
+# loads a full document and runs its own scripts. The relay serves the actual
+# mount page (with the module import + WS) at "/".
+function Base.show(io::IO, ::MIME"text/html", session::LiveSession)
+    u = url(session)
+    write(io, """<iframe src="$(u)" title="Veusz figure" """ *
+              """style="width:100%;height:$(session.height + 64)px;border:1px solid #d0d7de;border-radius:6px" """ *
+              """allow="cross-origin-isolated"></iframe>""")
+end
 
 # The URL of the live page (handy for opening in a browser outside a notebook).
 url(session::LiveSession) = "http://$(session.host):$(session.port)/"
