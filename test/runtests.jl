@@ -83,6 +83,12 @@ end
                 session = Veusz.live(fig)
                 try
                     @test session.port > 0
+                    # the mount page wires the editor bundle, the WS relay, and
+                    # the WASM base (so the renderer finds the bundle's wasm)
+                    html = sprint(show, MIME"text/html"(), session)
+                    @test occursin("veusz-embed.js", html)
+                    @test occursin("__VEUSZ_WASM_BASE__", html)
+                    @test occursin("ws://127.0.0.1:$(session.port)/", html)
                     WebSockets.open("ws://127.0.0.1:$(session.port)/") do ws
                         # A background collector with a hard time budget, so a
                         # missing message can never hang the suite.

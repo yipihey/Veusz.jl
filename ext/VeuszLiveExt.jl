@@ -119,12 +119,18 @@ function _http_handler(session::LiveSession)
 end
 
 function _mount_html(session::LiveSession)
+    # `base` is "" when we serve a local dist-embed (assets resolve at our
+    # server root), else the CDN version dir. The Vello WASM renderer reads
+    # window.__VEUSZ_WASM_BASE__ (default "/wasm"), so point it at the bundle's
+    # own wasm dir — otherwise it would resolve against this relay's origin.
     base = session.bundle_dir !== nothing ? "" : session.bundle_url
+    wasmbase = "$(base)/wasm"
     ws = "ws://$(session.host):$(session.port)/"
     return """
     <!doctype html><html><head><meta charset="utf-8"></head>
     <body style="margin:0">
     <div id="veusz-live" style="min-height:$(session.height)px"></div>
+    <script>window.__VEUSZ_WASM_BASE__ = "$(wasmbase)";</script>
     <script type="module">
     import { mountRemoteEditorFromComm, websocketComm } from "$(base)/veusz-embed.js";
     mountRemoteEditorFromComm(
