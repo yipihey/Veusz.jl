@@ -1,0 +1,39 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.9', '1.10', '1']
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+      - uses: julia-actions/cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # Install the Veusz daemon so the live tests run; if it can't run
+      # headless here, leave VEUSZ_PYTHON unset and the tests skip cleanly.
+      - name: Install + detect veusz
+        run: |
+          pip install numpy fonttools
+          pip install veusz || echo "veusz install failed (live tests will skip)"
+          if QT_QPA_PLATFORM=offscreen python -c "import veusz.daemon.cli" 2>/dev/null; then
+            echo "VEUSZ_PYTHON=$(which python)" >> "$GITHUB_ENV"
+            echo "QT_QPA_PLATFORM=offscreen" >> "$GITHUB_ENV"
+          else
+            echo "veusz not runnable headlessly; live tests will skip"
+          fi
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
