@@ -75,6 +75,55 @@ end
                     @test_skip "render_svg needs a Qt-capable veusz"
                 end
             end
+
+            @testset "live WebSocket relay (HTTP extension)" begin
+                using HTTP
+                using HTTP.WebSockets
+                JSON3 = Veusz.JSON3
+                session = Veusz.live(fig)
+                try
+                    @test session.port > 0
+                    WebSockets.open("ws://127.0.0.1:$(session.port)/") do ws
+                        # A background collector with a hard time budget, so a
+                        # missing message can never hang the suite.
+                        msgs = Vector{Any}()
+                        msglock = ReentrantLock()
+                        reader = @async try
+                            while true
+                                m = JSON3.read(WebSockets.receive(ws))
+                                lock(() -> push!(msgs, m), msglock)
+                            end
+                        catch
+                        end
+                        seen(id) = lock(() -> any(m -> get(m, :id, nothing) == id, msgs), msglock)
+                        notif(meth) = lock(() -> any(m -> String(get(m, :method, "")) == meth, msgs), msglock)
+                        waitfor(cond; secs = 5.0) = begin
+                            t0 = time()
+                            while !cond() && time() - t0 < secs
+                                sleep(0.05)
+                            end
+                            cond()
+                        end
+
+                        # version + doc.tree round-trip through the relay → daemon
+                        WebSockets.send(ws, JSON3.write(Dict("id" => 1, "method" => "version")))
+                        WebSockets.send(ws, JSON3.write(Dict("id" => 2, "method" => "doc.tree")))
+                        @test waitfor(() -> seen(1) && seen(2))
+                        r1 = lock(() -> first(m for m in msgs if get(m, :id, nothing) == 1), msglock)
+                        r2 = lock(() -> first(m for m in msgs if get(m, :id, nothing) == 2), msglock)
+                        @test haskey(r1.result, :api)
+                        @test haskey(r2.result, :children)
+
+                        # an edit returns a reply AND emits a doc.changed broadcast
+                        WebSockets.send(ws, JSON3.write(Dict("id" => 3, "method" => "doc.set",
+                            "params" => Dict("path" => "/page1/graph1/x/label", "value" => "live"))))
+                        @test waitfor(() -> seen(3))
+                        @test waitfor(() -> notif("doc.changed"))
+                    end
+                finally
+                    Veusz.close!(session)
+                end
+            end
         finally
             close!(fig)
         end

@@ -97,16 +97,42 @@ The protocol is documented in the Veusz repository
 (`docs/daemon-protocol.md`) and is language-agnostic — Veusz.jl is its first
 native non-Python client.
 
+## Live editable widget in IJulia
+
+In a Jupyter (IJulia) notebook a figure can be shown as a **live, editable**
+embed — the full in-browser Veusz editor (tree, inspector, toolbar, colormap +
+dataset pickers) driving the kernel's daemon in real time:
+
+```julia
+using Veusz, HTTP          # HTTP enables the live extension
+fig = Figure()
+plot!(fig, x, y)
+live(fig)                  # renders the editable editor inline
+```
+
+`live(fig)` starts a tiny per-kernel HTTP/WebSocket relay: the browser editor
+sends JSON-RPC over a WebSocket, the kernel forwards it to the figure's daemon,
+and daemon notifications stream back so the editor stays in sync. Edits in the
+browser mutate the same in-kernel document.
+
+The editor renders in the browser via **WebGPU** (Chrome / Safari 26+). It loads
+the embed bundle from the Veusz CDN by default; for offline use or a custom
+build, point it at a local `dist-embed`:
+
+```julia
+live(fig; bundle_dir="/path/to/veusz/veusz-tauri/dist-embed")
+```
+
+Notes: the relay listens on `127.0.0.1`, so this targets a **locally-run**
+Jupyter (the browser must reach the kernel host); a comm-based transport for
+remote hubs is future work. Without `HTTP` loaded, `display(fig)` still shows a
+static SVG preview, and `export_html` always gives a fully interactive
+standalone artifact.
+
 ## Roadmap
 
-- **Live editable widget in IJulia.** A figure displayed in a Jupyter (IJulia)
-  notebook becomes a *live, editable* embed: the kernel relays JSON-RPC over a
-  Jupyter comm to the daemon, and the in-browser editor (tree, inspector,
-  toolbar, colormap + dataset pickers) drives it. The pieces exist on the Veusz
-  side (`commTransport` + `mountRemoteEditor` in the embed); this is wired and
-  shipped once the embed bundle with remote-mount is published and the comm
-  relay is validated against IJulia. Today, IJulia shows a static SVG preview
-  inline, and `export_html` gives a fully interactive standalone artifact.
+- Comm-based transport (Jupyter widget protocol) so the live widget also works
+  over remote JupyterHub, not just local Jupyter.
 - TCP transport option (already supported by the daemon) for remote/sandboxed
   setups.
 

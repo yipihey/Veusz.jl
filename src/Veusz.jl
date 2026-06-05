@@ -29,10 +29,26 @@ export Figure,
     plot!, set!, get_setting, setdata!, add_widget!, remove_widget!,
     undo!, redo!, first_graph, tree,
     render_svg, render_png, save_vsz, export_figure, export_html,
-    close!
+    live, close!
 
 include("client.jl")
 include("figure.jl")
 include("io.jl")
+
+"""
+    live(fig; kwargs...)
+
+Show `fig` as a **live, editable widget** in a Jupyter (IJulia) notebook: the
+kernel relays JSON-RPC to the daemon over a WebSocket and the in-browser Veusz
+editor (tree, inspector, toolbar, colormap + dataset pickers) drives it.
+
+Requires `HTTP.jl` to be loaded (`using HTTP`) — it provides the relay via a
+package extension. Falls back to a clear error otherwise. The figure renders in
+the browser via WebGPU (Chrome / Safari 26+).
+"""
+function live end
+live(args...; kwargs...) = error(
+    "Veusz.live needs HTTP.jl — run `using HTTP` to enable the live IJulia widget. " *
+    "(Static inline display via `display(fig)` works without it.)")
 
 end # module Veusz

@@ -64,8 +64,11 @@ function _read_loop(c::Client)
             elseif haskey(msg, "method")
                 params = get(msg, "params", nothing)
                 for fn in get(c.notifs, String(msg["method"]), Function[])
+                    # invokelatest: the reader task is started in the Client
+                    # constructor, but handlers are registered later — a newer
+                    # world age than this task's. Call them in the latest world.
                     @async try
-                        fn(params)
+                        Base.invokelatest(fn, params)
                     catch
                     end
                 end
