@@ -115,9 +115,9 @@ sends JSON-RPC over a WebSocket, the kernel forwards it to the figure's daemon,
 and daemon notifications stream back so the editor stays in sync. Edits in the
 browser mutate the same in-kernel document.
 
-The editor renders in the browser via **WebGPU** (Chrome / Safari 26+). It loads
-the embed bundle from the Veusz CDN by default; for offline use or a custom
-build, point it at a local `dist-embed`:
+The editor renders the figure to **SVG** in the browser (no WebGPU required —
+works in any modern browser). It loads the embed bundle from the Veusz CDN by
+default; for offline use or a custom build, point it at a local `dist-embed`:
 
 ```julia
 live(fig; bundle_dir="/path/to/veusz/veusz-tauri/dist-embed")
@@ -127,12 +127,12 @@ The editor is embedded as an `<iframe>` pointing at the relay, so it works in
 **JupyterLab, classic Notebook, and VS Code** (which strip inline `<script>`
 from cell output — the iframe loads a full document and runs its own scripts).
 
-Notes: the relay listens on `127.0.0.1`, so this targets a **locally-run**
-Jupyter over `http://localhost` (the browser must reach the kernel host, and an
-`http` page can iframe an `http://localhost` relay without mixed-content
-issues); a comm-based transport for remote hubs is future work. Without `HTTP`
-loaded, `display(fig)` still shows a static SVG preview, and `export_html`
-always gives a fully interactive standalone artifact.
+The one remaining requirement is locality: the relay listens on `127.0.0.1`, so
+this targets a **locally-run** Jupyter over `http://localhost` (the browser must
+reach the kernel host; an `http` page iframes an `http://localhost` relay with
+no mixed-content issues). A comm-based transport for remote JupyterHub is future
+work. Without `HTTP` loaded, `display(fig)` still shows a static SVG preview, and
+`export_html` always gives a fully interactive standalone artifact.
 
 ## Roadmap
 
